@@ -14,4 +14,6 @@ All components used retain their original licenses.
 
 ## Credits
 
+`termos` is heavily inspired by [homeport/termshot](https://github.com/homeport/termshot).
+
 `termos` was created with [cookiecutter](https://cookiecutter.readthedocs.io/en/latest/) and [template](https://github.com/lukasz-lobocki/go-cookiecutter).
