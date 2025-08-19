@@ -2,11 +2,13 @@ module github.com/lukasz-lobocki/termos
 
 go 1.25.0
 
-require github.com/spf13/cobra v1.9.1
+require (
+	github.com/gonvenience/term v1.0.4
+	github.com/spf13/cobra v1.9.1
+)
 
 require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/gonvenience/term v1.0.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-ciede2000 v0.0.0-20170301095244-782e8c62fec3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -75,6 +76,7 @@ func Execute() {
 
 func init() {
 	initLoggers()
+	loggingLevel = 1 // TODO: from args
 
 	// Hide help command.
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
@@ -91,4 +93,26 @@ func initLoggers() {
 	logInfo = log.New(os.Stderr, hiCyan("╭info\n╰"), 0)
 	logWarning = log.New(os.Stderr, hiYellow("╭warning\n╰"), 0)
 	logError = log.New(os.Stderr, hiRed("╭error\n╰"), 0)
+}
+
+/*
+checkLogginglevel confirms if logging level does not exceed maximum level.
+
+	loggingLevel = 1 : often
+	loggingLevel = 2 : average
+	loggingLevel = 3 : seldom
+
+For convenience it also emits some log if loggingLevel >= 1.
+
+	'thisArgs' Values emitted to log.
+*/
+func checkLogginglevel(thisArgs []string) {
+	if loggingLevel > MAX_LOGGING_LEVEL {
+		logError.Fatalln(fmt.Errorf("%s", rootCmd.Flag("logging").Usage))
+	}
+
+	if loggingLevel >= 1 { // Show info.
+		logInfo.Printf("len(args): %d. args: %#v\n", len(thisArgs), thisArgs)
+		logInfo.Printf("loggingLevel: %d\n", loggingLevel)
+	}
 }
