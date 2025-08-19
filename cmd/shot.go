@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -56,14 +55,14 @@ func get_printout(rows uint16, cols uint16, cmd_name string, cmd_args ...string)
 	w := pty.Winsize{Rows: rows, Cols: cols}
 	c := exec.Command(cmd_name, cmd_args...)
 	f, err := pty.StartWithSize(c, &w) // get command output file from the (pty) pseudo-terminal
-	check(fmt.Errorf("failed to read pseud-terminal file. %w", err))
+	check("failed to read pseudo-terminal file", err)
 	io.Copy(&b, f) // read the stream, memorize it in the buffer
 	return b
 }
 
 func graph(in io.Reader) {
 	parsed, err := bunt.ParseStream(in)
-	check(fmt.Errorf("failed to parse stream. %w", err))
+	check("failed to parse stream.", err)
 	logInfo.Println(parsed.String())
 	// for _, cr := range *parsed {
 	// 	logInfo.Print(cr)
@@ -73,23 +72,26 @@ func graph(in io.Reader) {
 	dc.SetRGB(0, 0, 0)
 	dc.Fill()
 	err = dc.SavePNG("out.png")
-	check(fmt.Errorf("failed to save png. %w", err))
+	check("failed to save png.", err)
 }
 
-func check(e error) {
+func check(hint string, e error) {
+	if len(hint) == 0 {
+		hint = "none given"
+	}
 	if e != nil {
 		_, file, line, ok := runtime.Caller(1)
 		if ok {
-			logError.Fatalf("File:%s Line:%v Message:%+v", file, line, e)
+			logError.Fatalf("%s; %+v @ %s # %v ", hint, e, file, line)
 		} else {
-			logError.Fatalf("Message:%+v", e)
+			logError.Fatalf("%s; %+v", hint, e)
 		}
 	}
 }
 
 func save_stream(source []byte, target_filename string) {
 	o, err := os.Create(target_filename)
-	check(fmt.Errorf("failed to create a file. %w", err))
+	check("failed to create a file.", err)
 	defer o.Close()
 	o.Write(source)
 }
