@@ -1,6 +1,9 @@
 package cmd
 
-import "github.com/gonvenience/bunt"
+import (
+	"github.com/gonvenience/bunt"
+	"golang.org/x/image/font"
+)
 
 const (
 	TERMINAL_ROWS             = 40
@@ -15,4 +18,11 @@ type Scaffold struct {
 	columns int
 	padding float64
 	margin  float64
+
+	regular    font.Face
+	bold       font.Face
+	italic     font.Face
+	boldItalic font.Face
+
+	lineSpacing float64
 }

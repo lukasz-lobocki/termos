@@ -76,7 +76,8 @@ func Execute() {
 
 func init() {
 	initLoggers()
-	loggingLevel = 1 // TODO: from args
+	rootCmd.PersistentFlags().IntVar(&loggingLevel, "logging", 0, // Adding global ie. persistent logging level flag.
+		fmt.Sprintf("logging level [0...%d] (default 0)", MAX_LOGGING_LEVEL))
 
 	// Hide help command.
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})

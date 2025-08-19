@@ -7,12 +7,17 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
+
+	_ "embed"
 
 	"github.com/creack/pty"
 	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
 	"github.com/gonvenience/bunt"
 	"github.com/gonvenience/term"
 	"github.com/spf13/cobra"
+	"golang.org/x/image/font"
 )
 
 // shotCmd represents the shell command.
@@ -33,12 +38,36 @@ Arguments:
   PATH   location of the source database`,
 }
 
+var (
+	//go:embed JuliaMono-Bold.ttf
+	MonoBold []byte
+
+	//go:embed JuliaMono-BoldItalic.ttf
+	MonoBoldItalic []byte
+
+	//go:embed JuliaMono-RegularItalic.ttf
+	MonoItalic []byte
+
+	//go:embed JuliaMono-Regular.ttf
+	MonoRegular []byte
+)
+
 func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc package.new
-	f := 2.0
+	f := 1.0
+	fontRegular, _ := truetype.Parse(MonoRegular)
+	fontBold, _ := truetype.Parse(MonoBold)
+	fontItalic, _ := truetype.Parse(MonoItalic)
+	fontBoldItalic, _ := truetype.Parse(MonoBoldItalic)
+	fontFaceOptions := &truetype.Options{Size: f * 12, DPI: 144}
 	return Scaffold{
-		factor:  f,
-		margin:  f * 48,
-		padding: f * 24,
+		factor:      f,
+		margin:      0, //f * 48,
+		padding:     f * 24,
+		regular:     truetype.NewFace(fontRegular, fontFaceOptions),
+		bold:        truetype.NewFace(fontBold, fontFaceOptions),
+		italic:      truetype.NewFace(fontItalic, fontFaceOptions),
+		boldItalic:  truetype.NewFace(fontBoldItalic, fontFaceOptions),
+		lineSpacing: 1.2,
 	}
 }
 
@@ -46,36 +75,74 @@ func (s *Scaffold) SetColumns(columns int) {
 	s.columns = columns
 }
 
-func (s *Scaffold) GetColumns() int {
+func (s *Scaffold) GetColumns() (columns int) {
 	if s.columns != 0 {
 		return s.columns
 	}
-	columns, _ := term.GetTerminalSize()
+	columns, _ = term.GetTerminalSize()
 	return columns
 }
 
+func (s *Scaffold) FontHeight() float64 {
+	return float64(s.regular.Metrics().Height >> 6)
+}
+
 func (s *Scaffold) AddContent(in io.Reader) {
-	var bs bunt.String
-	var n int
+	var (
+		bs bunt.String
+		n  int // column counter
+	)
 
 	ps, err := bunt.ParseStream(in)
 	check("failed to parse stream", err)
 
-	for _, cr := range *ps {
+	for _, cr := range *ps { // wrap if wider than capcity
 
 		n++
 
-		if cr.Symbol == '\n' {
+		if cr.Symbol == '\n' { // reset when new line encountered
 			n = 0
 		}
-		if n > s.GetColumns() { // Add an additional newline in case the column count is reached and line wrapping is needed
-			n = 0
+		if n > s.GetColumns() { // wrap in case the column capacity is reached and reset the counter
 			bs = append(bs, bunt.ColoredRune{Settings: cr.Settings, Symbol: '\n'})
+			n = 0
 		}
 
 		bs = append(bs, cr)
 	}
 	s.content = append(s.content, bs...)
+}
+
+func (s *Scaffold) measureContent() (width float64, height float64) {
+	var (
+		rc = make([]rune, len(s.content))
+	)
+	for i, cr := range s.content { // extract symbols from content
+		rc[i] = cr.Symbol
+	}
+
+	ls := strings.Split(
+		strings.TrimSuffix(string(rc), "\n"), // avoid unnecessary split at the very end
+		"\n",                                 // by lines
+	)
+
+	// temporary drawer for measurements
+	d := &font.Drawer{Face: s.regular}
+
+	switch s.columns {
+	case 0: // width based on actual longest line
+		for _, l := range ls {
+			if lw := float64(d.MeasureString(l) >> 6); lw > width { // type of fixed.Int26_6 divided by 2^6
+				width = lw // update width if measured current line width was bigger
+			}
+		}
+	default: // width based on column value
+		width = float64(d.MeasureString(strings.Repeat("W", s.GetColumns())) >> 6) // W is the widest glyph
+	}
+
+	height = float64(len(ls)) * s.FontHeight() * s.lineSpacing
+
+	return width, height
 }
 
 func (s *Scaffold) image() image.Image {
@@ -119,22 +186,21 @@ func doShot(args []string) {
 
 	s := NewScaffold()
 	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
+	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
 	s.AddContent(&buf)                                                     // Add the captured output to the scaffold
 	if loggingLevel >= 3 {
-		logInfo.Printf("from scaffold \n%s", s.content.String())
+		logInfo.Printf("from scaffold:\n%s", s.content.String())
 	}
-	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME) // save it
 	//graph(&buf)
 }
 
-func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) bytes.Buffer {
-	var b bytes.Buffer
+func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {
 	w := pty.Winsize{Rows: rows, Cols: cols}
 	c := exec.Command(cmd_name, cmd_args...)
 	f, err := pty.StartWithSize(c, &w) // get command output file from the (pty) pseudo-terminal
 	check("failed to read pseudo-terminal file", err)
-	io.Copy(&b, f) // read the stream, memorize it in the buffer
-	return b
+	io.Copy(&printout, f) // read the stream, memorize it in the buffer
+	return printout
 }
 
 func graph(in io.Reader) {
