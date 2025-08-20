@@ -3,7 +3,6 @@ package stage
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"io"
 	"math"
 	"strings"
@@ -18,10 +17,11 @@ import (
 )
 
 const (
-	TERMINAL_COLOR = "#151515"
-	RED            = "#ED655A"
-	YELLOW         = "#E1C04C"
-	GREEN          = "#71BD47"
+	BACKGROUND_COLOR = "#151515"
+	FOREGROUND_COLOR = "#DCDCDC"
+	RED              = "#ED655A"
+	YELLOW           = "#E1C04C"
+	GREEN            = "#71BD47"
 )
 
 type Stage struct {
@@ -36,10 +36,10 @@ type Stage struct {
 	italic     font.Face
 	boldItalic font.Face
 
-	defaultForegroundColor color.Color
-	backgroundColor        string
-	lineSpacing            float64
-	tabSpaces              int
+	foregroundColor string
+	backgroundColor string
+	lineSpacing     float64
+	tabSpaces       int
 }
 
 var (
@@ -53,7 +53,7 @@ var (
 	MonoRegular []byte
 )
 
-func New() (Stage, error) { //TODO: male pierwsze litery klas?
+func New() (Stage, error) {
 	f := 1.0
 
 	return Stage{
@@ -61,10 +61,10 @@ func New() (Stage, error) { //TODO: male pierwsze litery klas?
 		margin:  0,      //f * 48, // empty area outside of terminal window // TODO make param
 		padding: f * 24, // empty area inside of terminal window
 
-		defaultForegroundColor: bunt.LightGray,
-		backgroundColor:        TERMINAL_COLOR,
+		foregroundColor: FOREGROUND_COLOR,
+		backgroundColor: BACKGROUND_COLOR,
 
-		columns: 120, // TODO parametrize
+		columns: 0, // TODO parametrize
 
 		lineSpacing: 1.2,
 		tabSpaces:   2,
@@ -136,7 +136,7 @@ func (s *Stage) AddCommand(args ...string) {
 	))
 }
 
-func (s *Stage) MeasureContent() (width float64, height float64) {
+func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	var (
 		rc = make([]rune, len(s.content))
 	)
@@ -158,29 +158,33 @@ func (s *Stage) MeasureContent() (width float64, height float64) {
 			if lw := float64(d.MeasureString(l) >> 6); lw > width { // type of fixed.Int26_6 divided by 2^6
 				width = lw // update width if measured current line width was bigger
 			}
+			if cw := bunt.PlainTextLength(l); cw > columns {
+				columns = cw // update columns if measured current line columns was bigger
+			}
 		}
 	default: // width based on column value
 		width = float64(d.MeasureString(strings.Repeat("W", s.GetColumns())) >> 6) // W is the widest glyph
+		columns = s.GetColumns()
 	}
 
 	height = float64(len(ls)) * s.GetFontHeight() * s.lineSpacing
 
-	return width, height // TODO w=w-1
+	return width, height, columns
 }
 
 func (s *Stage) DoImage() (image.Image, error) {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
-		corner         = f(6)
-		dotsRadius     = f(9)
-		dotsDistance   = f(25)
-		titleBarHeight = f(40) // TODO calculate instead of const
 		marginX        = s.margin
 		marginY        = s.margin
 		paddingX       = s.padding
 		paddingY       = s.padding
+		corner         = f(6)
+		dotsRadius     = f(9)
+		dotsDistance   = dotsRadius * 3
+		titleBarHeight = dotsRadius*2 + paddingY
 	)
-	contentWidth, contentHeight := s.MeasureContent()
+	contentWidth, contentHeight, _ := s.MeasureContent()
 	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // Make sure the output window is big enough
 
 	width := contentWidth + 2*marginX + 2*paddingX
@@ -240,7 +244,7 @@ func (s *Stage) DoImage() (image.Image, error) {
 				int((cr.Settings>>24)&0xFF),
 			)
 		default:
-			dc.SetColor(s.defaultForegroundColor)
+			dc.SetHexColor(s.foregroundColor)
 		}
 
 		// special symbols
@@ -291,7 +295,7 @@ func (s *Stage) GetColumns() (columns int) {
 	if s.columns != 0 {
 		return s.columns
 	}
-	columns, _ = term.GetTerminalSize()
+	columns, _ = term.GetTerminalSize() // TODO: wykorzystac to przy deklarowaniu terminala
 	return columns
 }
 

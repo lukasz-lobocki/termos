@@ -59,8 +59,8 @@ func doShot(args []string) {
 	if loggingLevel >= 3 {
 		logInfo.Printf("from scaffold:\n%s", s.GetContent().String())
 	}
-	w, h := s.MeasureContent()
-	logInfo.Printf("w: %f, h; %f", w, h)
+	_, _, c := s.MeasureContent()
+	logInfo.Printf("Number of columns used: %d. Use XXX parameter to impose it.", c)
 	_, err = s.DoImage()
 	check("imaging failed", err)
 
