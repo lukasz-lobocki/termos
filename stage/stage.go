@@ -2,7 +2,6 @@ package stage
 
 import (
 	"fmt"
-	"image"
 	"io"
 	"math"
 	"strings"
@@ -172,7 +171,7 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	return width, height, columns
 }
 
-func (s *Stage) DoImage() (image.Image, error) {
+func (s *Stage) SaveImage(contentWidth float64, contentHeight float64) error {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		marginX        = s.margin
@@ -184,7 +183,6 @@ func (s *Stage) DoImage() (image.Image, error) {
 		dotsDistance   = dotsRadius * 3
 		titleBarHeight = dotsRadius*2 + paddingY
 	)
-	contentWidth, contentHeight, _ := s.MeasureContent()
 	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // Make sure the output window is big enough
 
 	width := contentWidth + 2*marginX + 2*paddingX
@@ -274,9 +272,9 @@ func (s *Stage) DoImage() (image.Image, error) {
 
 	err := dc.SavePNG("out.png") // TODO refactor, extract it outside
 	if err != nil {
-		return nil, fmt.Errorf("failed to save png. %w", err)
+		return fmt.Errorf("failed to save png. %w", err)
 	}
-	return dc.Image(), nil
+	return nil
 }
 
 func (s *Stage) WriteRaw(w io.Writer) error { // TODO use it

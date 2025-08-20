@@ -47,23 +47,23 @@ func doShot(args []string) {
 
 	checkLogginglevel(args)
 
-	s, err = stage.New()
-	check("failed creating stage", err)
-	err = s.AddFonts()
-	check("failed adding fonts", err)
 	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
 	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
-	s.AddCommand(args...)                                                  // Add the issued command to the scaffold
-	err = s.AddContent(&buf)                                               // Add the captured output to the scaffold
-	check("failed adding content", err)
-	if loggingLevel >= 3 {
-		logInfo.Printf("from scaffold:\n%s", s.GetContent().String())
-	}
-	_, _, c := s.MeasureContent()
-	logInfo.Printf("Number of columns used: %d. Use XXX parameter to impose it.", c)
-	_, err = s.DoImage()
-	check("imaging failed", err)
 
+	s, err = stage.New()
+	check("failed creating stage", err)
+
+	err = s.AddFonts()
+	check("failed adding fonts", err)
+
+	s.AddCommand(args...)    // Add the issued command to the scaffold
+	err = s.AddContent(&buf) // Add the captured output to the scaffold
+	check("failed adding content", err)
+
+	contentWidth, contentHeight, contentColumns := s.MeasureContent()
+	logInfo.Printf("Number of columns used: %d. Use XXX parameter to impose it.", contentColumns) // TODO XXX
+	err = s.SaveImage(contentWidth, contentHeight)
+	check("imaging failed", err)
 }
 
 func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {
