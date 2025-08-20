@@ -40,6 +40,9 @@ func init() {
 }
 
 func doShot(args []string) {
+	var (
+		err error
+	)
 
 	checkLogginglevel(args)
 
@@ -47,13 +50,16 @@ func doShot(args []string) {
 	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
 	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
 	s.AddCommand(args...)                                                  // Add the issued command to the scaffold
-	s.AddContent(&buf)                                                     // Add the captured output to the scaffold
+	err = s.AddContent(&buf)                                               // Add the captured output to the scaffold
+	check("failed adding content", err)
 	if loggingLevel >= 3 {
 		logInfo.Printf("from scaffold:\n%s", s.GetContent().String())
 	}
 	w, h := s.MeasureContent()
 	logInfo.Printf("w: %f, h; %f", w, h)
-	s.DoImage()
+	_, err = s.DoImage()
+	check("imaging failed", err)
+
 }
 
 func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {

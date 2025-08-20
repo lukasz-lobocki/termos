@@ -1,6 +1,7 @@
 package stage
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"io"
@@ -36,6 +37,7 @@ type Stage struct {
 	boldItalic font.Face
 
 	defaultForegroundColor color.Color
+	backgroundColor        string
 	lineSpacing            float64
 	tabSpaces              int
 }
@@ -51,7 +53,7 @@ var (
 	MonoRegular []byte
 )
 
-func New() Stage { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc stage.New, male pierwsze litery klas.
+func New() Stage { //TODO: male pierwsze litery klas?
 	f := 1.0
 	fontRegular, _ := truetype.Parse(MonoRegular)
 	fontBold, _ := truetype.Parse(MonoBold)
@@ -64,6 +66,7 @@ func New() Stage { //TODO: wydziel jako osobny package i zmien na New, aby stowr
 		padding: f * 24, // empty area inside of terminal window
 
 		defaultForegroundColor: bunt.LightGray,
+		backgroundColor:        TERMINAL_COLOR,
 		regular:                truetype.NewFace(fontRegular, fontFaceOptions),
 		bold:                   truetype.NewFace(fontBold, fontFaceOptions),
 		italic:                 truetype.NewFace(fontItalic, fontFaceOptions),
@@ -76,34 +79,16 @@ func New() Stage { //TODO: wydziel jako osobny package i zmien na New, aby stowr
 	}
 }
 
-func (s *Stage) SetColumns(columns int) {
-	s.columns = columns
-}
-
-func (s *Stage) GetColumns() (columns int) {
-	if s.columns != 0 {
-		return s.columns
-	}
-	columns, _ = term.GetTerminalSize()
-	return columns
-}
-
-func (s *Stage) GetFontHeight() float64 {
-	return float64(s.regular.Metrics().Height >> 6)
-}
-
-func (s *Stage) GetContent() bunt.String {
-	return s.content
-}
-
-func (s *Stage) AddContent(in io.Reader) {
+func (s *Stage) AddContent(in io.Reader) error {
 	var (
 		bs bunt.String
 		n  int // column counter
 	)
 
 	ps, err := bunt.ParseStream(in)
-	check("failed to parse stream", err)
+	if err != nil {
+		return fmt.Errorf("failed to parse stream. %w", err)
+	}
 
 	for _, cr := range *ps { // wrap if wider than capcity
 
@@ -120,6 +105,7 @@ func (s *Stage) AddContent(in io.Reader) {
 		bs = append(bs, cr)
 	}
 	s.content = append(s.content, bs...)
+	return nil
 }
 
 func (s *Stage) AddCommand(args ...string) {
@@ -160,7 +146,7 @@ func (s *Stage) MeasureContent() (width float64, height float64) {
 	return width, height // TODO w=w-1
 }
 
-func (s *Stage) DoImage() image.Image {
+func (s *Stage) DoImage() (image.Image, error) {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		corner         = f(6)
@@ -181,7 +167,7 @@ func (s *Stage) DoImage() image.Image {
 
 	// Rounded rectangle inside the margins to produce an impression of a window
 	dc.DrawRoundedRectangle(marginX, marginY, width-2*marginX, height-2*marginY, corner)
-	dc.SetHexColor(TERMINAL_COLOR)
+	dc.SetHexColor(s.backgroundColor)
 	dc.Fill()
 
 	// 3 colored dots mimicking menu bar
@@ -261,26 +247,36 @@ func (s *Stage) DoImage() image.Image {
 	}
 
 	err := dc.SavePNG("out.png")
-	check("failed to save png", err)
-
-	return dc.Image()
+	if err != nil {
+		return nil, fmt.Errorf("failed to save png. %w", err)
+	}
+	return dc.Image(), nil
 }
 
-func (s *Stage) WriteRaw(w io.Writer) { // TODO use it
+func (s *Stage) WriteRaw(w io.Writer) error { // TODO use it
 	_, err := w.Write([]byte(s.content.String()))
-	check("writing raw failed", err)
+	if err != nil {
+		return fmt.Errorf("writing raw failed. %w", err)
+	}
+	return nil
 }
 
-func check(hint string, e error) {
-	// if len(hint) == 0 {
-	// 	hint = "no hint"
-	// }
-	// if e != nil {
-	// 	_, f, l, ok := runtime.Caller(1)
-	// 	if ok {
-	// 		logError.Fatalf("%s; %+v @ %s # %d", hint, e, f, l)
-	// 	} else {
-	// 		logError.Fatalf("%s; %+v", hint, e)
-	// 	}
-	// }
+func (s *Stage) SetColumns(columns int) {
+	s.columns = columns
+}
+
+func (s *Stage) GetColumns() (columns int) {
+	if s.columns != 0 {
+		return s.columns
+	}
+	columns, _ = term.GetTerminalSize()
+	return columns
+}
+
+func (s *Stage) GetFontHeight() float64 {
+	return float64(s.regular.Metrics().Height >> 6)
+}
+
+func (s *Stage) GetContent() bunt.String {
+	return s.content
 }
