@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -41,18 +42,15 @@ Arguments:
 var (
 	//go:embed JuliaMono-Bold.ttf
 	MonoBold []byte
-
 	//go:embed JuliaMono-BoldItalic.ttf
 	MonoBoldItalic []byte
-
 	//go:embed JuliaMono-RegularItalic.ttf
 	MonoItalic []byte
-
 	//go:embed JuliaMono-Regular.ttf
 	MonoRegular []byte
 )
 
-func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc package.new
+func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc package.new, male pierwsze litery klas.
 	f := 1.0
 	fontRegular, _ := truetype.Parse(MonoRegular)
 	fontBold, _ := truetype.Parse(MonoBold)
@@ -60,14 +58,16 @@ func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New
 	fontBoldItalic, _ := truetype.Parse(MonoBoldItalic)
 	fontFaceOptions := &truetype.Options{Size: f * 12, DPI: 144}
 	return Scaffold{
-		factor:      f,
-		margin:      0, //f * 48,
-		padding:     f * 24,
-		regular:     truetype.NewFace(fontRegular, fontFaceOptions),
-		bold:        truetype.NewFace(fontBold, fontFaceOptions),
-		italic:      truetype.NewFace(fontItalic, fontFaceOptions),
-		boldItalic:  truetype.NewFace(fontBoldItalic, fontFaceOptions),
-		lineSpacing: 1.2,
+		factor:                 f,
+		margin:                 0, //f * 48, // TODO get rid
+		padding:                f * 24,
+		defaultForegroundColor: bunt.LightGray,
+		regular:                truetype.NewFace(fontRegular, fontFaceOptions),
+		bold:                   truetype.NewFace(fontBold, fontFaceOptions),
+		italic:                 truetype.NewFace(fontItalic, fontFaceOptions),
+		boldItalic:             truetype.NewFace(fontBoldItalic, fontFaceOptions),
+		lineSpacing:            1.2,
+		tabSpaces:              2,
 	}
 }
 
@@ -146,29 +146,110 @@ func (s *Scaffold) measureContent() (width float64, height float64) {
 }
 
 func (s *Scaffold) image() image.Image {
-	// var (
-	// 	f              = func(v float64) float64 { return s.factor * v }
-	// 	corner         = f(6)
-	// 	radius         = f(9)
-	// 	distance       = f(25) // TODO: get rid
-	// 	titleBarHeight = f(40)
-	// )
-	// contentWidth, contentHeight := s.measureContent()
-	// contentWidth = math.Max(contentWidth, 3*distance+3*radius) // Make sure the output window is big enough
+	var (
+		f              = func(v float64) float64 { return s.factor * v }
+		corner         = f(6)
+		radius         = f(9)
+		distance       = f(25) // TODO: get rid
+		titleBarHeight = f(40)
+	)
+	contentWidth, contentHeight := s.measureContent()
+	contentWidth = math.Max(contentWidth, 3*distance+3*radius) // Make sure the output window is big enough
 
-	// marginX, marginY := s.margin, s.margin
-	// xOffset, yOffset := marginX, marginY
-	// paddingX, paddingY := s.padding, s.padding
+	marginX, marginY := s.margin, s.margin
+	xOffset, yOffset := marginX, marginY
+	paddingX, paddingY := s.padding, s.padding
 
-	// width := contentWidth + 2*marginX + 2*paddingX
-	// height := contentHeight + 2*marginY + 2*paddingY + titleBarHeight
-	dc := gg.NewContext(2, 2) // dc := gg.NewContext(int(width), int(height))
+	width := contentWidth + 2*marginX + 2*paddingX
+	height := contentHeight + 2*marginY + 2*paddingY + titleBarHeight
+	dc := gg.NewContext(int(width), int(height))
 
-	// Draw rounded rectangle with outline to produce impression of a window
-	//
-	// dc.DrawRoundedRectangle(xOffset, yOffset, width-2*marginX, height-2*marginY, corner)
-	// dc.SetHexColor("#151515")
-	// dc.Fill()
+	// Rounded rectangle to produce impression of a window
+	dc.DrawRoundedRectangle(xOffset, yOffset, width-2*marginX, height-2*marginY, corner)
+	dc.SetHexColor(TERMINAL_COLOR)
+	dc.Fill()
+
+	// 3 colored dots mimicking menu bar
+	for i, color := range []string{RED, YELLOW, GREEN} {
+		dc.DrawCircle(xOffset+paddingX+float64(i)*distance+f(4), yOffset+paddingY+f(4), radius)
+		dc.SetHexColor(color)
+		dc.Fill()
+	}
+
+	var x, y = xOffset + paddingX, yOffset + paddingY + titleBarHeight + s.FontHeight()
+	for _, cr := range s.content {
+		switch cr.Settings & 0x1C {
+		case 4:
+			dc.SetFontFace(s.bold)
+
+		case 8:
+			dc.SetFontFace(s.italic)
+
+		case 12:
+			dc.SetFontFace(s.boldItalic)
+
+		default:
+			dc.SetFontFace(s.regular)
+		}
+
+		str := string(cr.Symbol)
+		w, h := dc.MeasureString(str)
+
+		// background color
+		switch cr.Settings & 0x02 { //nolint:gocritic
+		case 2:
+			dc.SetRGB255(
+				int((cr.Settings>>32)&0xFF), // #nosec G115
+				int((cr.Settings>>40)&0xFF), // #nosec G115
+				int((cr.Settings>>48)&0xFF), // #nosec G115
+			)
+
+			dc.DrawRectangle(x, y-h+12, w, h)
+			dc.Fill()
+		}
+
+		// foreground color
+		switch cr.Settings & 0x01 {
+		case 1:
+			dc.SetRGB255(
+				int((cr.Settings>>8)&0xFF),  // #nosec G115
+				int((cr.Settings>>16)&0xFF), // #nosec G115
+				int((cr.Settings>>24)&0xFF), // #nosec G115
+			)
+
+		default:
+			dc.SetColor(s.defaultForegroundColor)
+		}
+
+		switch str {
+		case "\n":
+			x = xOffset + paddingX
+			y += h * s.lineSpacing
+			continue
+
+		case "\t":
+			x += w * float64(s.tabSpaces)
+			continue
+
+		case "✗", "ˣ": // mitigate issue #1 by replacing it with a similar character
+			str = "×"
+		}
+
+		dc.DrawString(str, x, y)
+
+		// There seems to be no font face based way to do an underlined
+		// string, therefore manually draw a line under each character
+		if cr.Settings&0x1C == 16 {
+			dc.DrawLine(x, y+f(4), x+w, y+f(4))
+			dc.SetLineWidth(f(1))
+			dc.Stroke()
+		}
+
+		x += w
+	}
+
+	err := dc.SavePNG("out.png")
+	check("failed to save png", err)
 
 	return dc.Image()
 }
@@ -191,11 +272,14 @@ func doShot(args []string) {
 	if loggingLevel >= 3 {
 		logInfo.Printf("from scaffold:\n%s", s.content.String())
 	}
-	//graph(&buf)
+	w, h := s.measureContent()
+	logInfo.Printf("w: %f, h; %f", w, h)
+	s.image()
+	graph()
 }
 
 func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {
-	w := pty.Winsize{Rows: rows, Cols: cols}
+	w := pty.Winsize{Rows: rows, Cols: cols} // size using received parameters
 	c := exec.Command(cmd_name, cmd_args...)
 	f, err := pty.StartWithSize(c, &w) // get command output file from the (pty) pseudo-terminal
 	check("failed to read pseudo-terminal file", err)
@@ -203,18 +287,12 @@ func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) 
 	return printout
 }
 
-func graph(in io.Reader) {
-	parsed, err := bunt.ParseStream(in)
-	check("failed to parse stream", err)
-	if loggingLevel >= 3 {
-		logInfo.Println(parsed.String())
-	}
-
+func graph() {
 	dc := gg.NewContext(1000, 1000)
 	dc.DrawCircle(500, 500, 400)
 	dc.SetRGB(0, 0, 0)
 	dc.Fill()
-	err = dc.SavePNG("out.png")
+	err := dc.SavePNG("dot.png")
 	check("failed to save png", err)
 }
 
