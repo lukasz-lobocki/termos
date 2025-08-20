@@ -42,11 +42,15 @@ func init() {
 func doShot(args []string) {
 	var (
 		err error
+		s   stage.Stage
 	)
 
 	checkLogginglevel(args)
 
-	s := stage.New()
+	s, err = stage.New()
+	check("failed creating stage", err)
+	err = s.AddFonts()
+	check("failed adding fonts", err)
 	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
 	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
 	s.AddCommand(args...)                                                  // Add the issued command to the scaffold

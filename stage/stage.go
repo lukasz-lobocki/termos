@@ -53,13 +53,9 @@ var (
 	MonoRegular []byte
 )
 
-func New() Stage { //TODO: male pierwsze litery klas?
+func New() (Stage, error) { //TODO: male pierwsze litery klas?
 	f := 1.0
-	fontRegular, _ := truetype.Parse(MonoRegular)
-	fontBold, _ := truetype.Parse(MonoBold)
-	fontItalic, _ := truetype.Parse(MonoItalic)
-	fontBoldItalic, _ := truetype.Parse(MonoBoldItalic)
-	fontFaceOptions := &truetype.Options{Size: f * 12, DPI: 144}
+
 	return Stage{
 		factor:  f,
 		margin:  0,      //f * 48, // empty area outside of terminal window // TODO make param
@@ -67,16 +63,42 @@ func New() Stage { //TODO: male pierwsze litery klas?
 
 		defaultForegroundColor: bunt.LightGray,
 		backgroundColor:        TERMINAL_COLOR,
-		regular:                truetype.NewFace(fontRegular, fontFaceOptions),
-		bold:                   truetype.NewFace(fontBold, fontFaceOptions),
-		italic:                 truetype.NewFace(fontItalic, fontFaceOptions),
-		boldItalic:             truetype.NewFace(fontBoldItalic, fontFaceOptions),
 
 		columns: 120, // TODO parametrize
 
 		lineSpacing: 1.2,
 		tabSpaces:   2,
+	}, nil
+}
+
+func (s *Stage) AddFonts() error {
+	fontFaceOptions := &truetype.Options{Size: s.factor * 12, DPI: 144}
+
+	fontRegular, err := truetype.Parse(MonoRegular)
+	if err != nil {
+		return fmt.Errorf("failed to parse MonoRegular font. %w", err)
 	}
+	s.regular = truetype.NewFace(fontRegular, fontFaceOptions)
+
+	fontBold, err := truetype.Parse(MonoBold)
+	if err != nil {
+		return fmt.Errorf("failed to parse MonoBold font. %w", err)
+	}
+	s.bold = truetype.NewFace(fontBold, fontFaceOptions)
+
+	fontItalic, err := truetype.Parse(MonoItalic)
+	if err != nil {
+		return fmt.Errorf("failed to parse MonoItalic font. %w", err)
+	}
+	s.italic = truetype.NewFace(fontItalic, fontFaceOptions)
+
+	fontBoldItalic, err := truetype.Parse(MonoBoldItalic)
+	if err != nil {
+		return fmt.Errorf("failed to parse MonoBoldItalic font. %w", err)
+	}
+	s.boldItalic = truetype.NewFace(fontBoldItalic, fontFaceOptions)
+
+	return nil
 }
 
 func (s *Stage) AddContent(in io.Reader) error {
@@ -246,7 +268,7 @@ func (s *Stage) DoImage() (image.Image, error) {
 		x += w // advance the x position for the next symbol
 	}
 
-	err := dc.SavePNG("out.png")
+	err := dc.SavePNG("out.png") // TODO refactor, extract it outside
 	if err != nil {
 		return nil, fmt.Errorf("failed to save png. %w", err)
 	}
