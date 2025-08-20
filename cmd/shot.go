@@ -68,6 +68,8 @@ func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New
 		italic:                 truetype.NewFace(fontItalic, fontFaceOptions),
 		boldItalic:             truetype.NewFace(fontBoldItalic, fontFaceOptions),
 
+		columns: 120, // TODO parametrize
+
 		lineSpacing: 1.2,
 		tabSpaces:   2,
 	}
@@ -250,7 +252,7 @@ func (s *Scaffold) DoImage() image.Image {
 			dc.Stroke()
 		}
 
-		x += w // advance x position for the next symbol
+		x += w // advance the x position for the next symbol
 	}
 
 	err := dc.SavePNG("out.png")
