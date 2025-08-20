@@ -50,7 +50,7 @@ var (
 	MonoRegular []byte
 )
 
-func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc package.new, male pierwsze litery klas.
+func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New, aby stowrzyc stage.New, male pierwsze litery klas.
 	f := 1.0
 	fontRegular, _ := truetype.Parse(MonoRegular)
 	fontBold, _ := truetype.Parse(MonoBold)
@@ -58,16 +58,18 @@ func NewScaffold() Scaffold { //TODO: wydziel jako osobny package i zmien na New
 	fontBoldItalic, _ := truetype.Parse(MonoBoldItalic)
 	fontFaceOptions := &truetype.Options{Size: f * 12, DPI: 144}
 	return Scaffold{
-		factor:                 f,
-		margin:                 0, //f * 48, // TODO get rid
-		padding:                f * 24,
+		factor:  f,
+		margin:  0,      //f * 48, // empty area outside of terminal window // TODO make param
+		padding: f * 24, // empty area inside of terminal window
+
 		defaultForegroundColor: bunt.LightGray,
 		regular:                truetype.NewFace(fontRegular, fontFaceOptions),
 		bold:                   truetype.NewFace(fontBold, fontFaceOptions),
 		italic:                 truetype.NewFace(fontItalic, fontFaceOptions),
 		boldItalic:             truetype.NewFace(fontBoldItalic, fontFaceOptions),
-		lineSpacing:            1.2,
-		tabSpaces:              2,
+
+		lineSpacing: 1.2,
+		tabSpaces:   2,
 	}
 }
 
@@ -83,7 +85,7 @@ func (s *Scaffold) GetColumns() (columns int) {
 	return columns
 }
 
-func (s *Scaffold) FontHeight() float64 {
+func (s *Scaffold) GetFontHeight() float64 {
 	return float64(s.regular.Metrics().Height >> 6)
 }
 
@@ -113,6 +115,12 @@ func (s *Scaffold) AddContent(in io.Reader) {
 	s.content = append(s.content, bs...)
 }
 
+func (s *Scaffold) AddCommand(args ...string) {
+	s.AddContent(strings.NewReader(
+		bunt.Sprintf("Lime{$} Lime{%s}\n\n", strings.Join(args, " ")),
+	))
+}
+
 func (s *Scaffold) measureContent() (width float64, height float64) {
 	var (
 		rc = make([]rune, len(s.content))
@@ -140,118 +148,120 @@ func (s *Scaffold) measureContent() (width float64, height float64) {
 		width = float64(d.MeasureString(strings.Repeat("W", s.GetColumns())) >> 6) // W is the widest glyph
 	}
 
-	height = float64(len(ls)) * s.FontHeight() * s.lineSpacing
+	height = float64(len(ls)) * s.GetFontHeight() * s.lineSpacing
 
-	return width, height
+	return width, height // TODO w=w-1
 }
 
-func (s *Scaffold) image() image.Image {
+func (s *Scaffold) DoImage() image.Image {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		corner         = f(6)
-		radius         = f(9)
-		distance       = f(25) // TODO: get rid
-		titleBarHeight = f(40)
+		dotsRadius     = f(9)
+		dotsDistance   = f(25)
+		titleBarHeight = f(40) // TODO calculate instead of const
+		marginX        = s.margin
+		marginY        = s.margin
+		paddingX       = s.padding
+		paddingY       = s.padding
 	)
 	contentWidth, contentHeight := s.measureContent()
-	contentWidth = math.Max(contentWidth, 3*distance+3*radius) // Make sure the output window is big enough
-
-	marginX, marginY := s.margin, s.margin
-	xOffset, yOffset := marginX, marginY
-	paddingX, paddingY := s.padding, s.padding
+	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // Make sure the output window is big enough
 
 	width := contentWidth + 2*marginX + 2*paddingX
 	height := contentHeight + 2*marginY + 2*paddingY + titleBarHeight
 	dc := gg.NewContext(int(width), int(height))
 
-	// Rounded rectangle to produce impression of a window
-	dc.DrawRoundedRectangle(xOffset, yOffset, width-2*marginX, height-2*marginY, corner)
+	// Rounded rectangle inside the margins to produce an impression of a window
+	dc.DrawRoundedRectangle(marginX, marginY, width-2*marginX, height-2*marginY, corner)
 	dc.SetHexColor(TERMINAL_COLOR)
 	dc.Fill()
 
 	// 3 colored dots mimicking menu bar
 	for i, color := range []string{RED, YELLOW, GREEN} {
-		dc.DrawCircle(xOffset+paddingX+float64(i)*distance+f(4), yOffset+paddingY+f(4), radius)
+		dc.DrawCircle(marginX+paddingX+dotsRadius+float64(i)*dotsDistance, marginY+paddingY+dotsRadius, dotsRadius)
 		dc.SetHexColor(color)
 		dc.Fill()
 	}
 
-	var x, y = xOffset + paddingX, yOffset + paddingY + titleBarHeight + s.FontHeight()
-	for _, cr := range s.content {
+	// current posiion
+	var x, y = marginX + paddingX, marginY + paddingY + titleBarHeight + s.GetFontHeight()
+
+	for _, cr := range s.content { // for each rune
+
+		// change font face
 		switch cr.Settings & 0x1C {
 		case 4:
 			dc.SetFontFace(s.bold)
-
 		case 8:
 			dc.SetFontFace(s.italic)
-
 		case 12:
 			dc.SetFontFace(s.boldItalic)
-
 		default:
 			dc.SetFontFace(s.regular)
 		}
 
-		str := string(cr.Symbol)
-		w, h := dc.MeasureString(str)
+		sym := string(cr.Symbol)
+		w, h := dc.MeasureString(sym)
 
-		// background color
-		switch cr.Settings & 0x02 { //nolint:gocritic
+		// change background color
+		switch cr.Settings & 0x02 {
 		case 2:
 			dc.SetRGB255(
-				int((cr.Settings>>32)&0xFF), // #nosec G115
-				int((cr.Settings>>40)&0xFF), // #nosec G115
-				int((cr.Settings>>48)&0xFF), // #nosec G115
+				int((cr.Settings>>32)&0xFF),
+				int((cr.Settings>>40)&0xFF),
+				int((cr.Settings>>48)&0xFF),
 			)
-
 			dc.DrawRectangle(x, y-h+12, w, h)
 			dc.Fill()
 		}
 
-		// foreground color
+		// change foreground color
 		switch cr.Settings & 0x01 {
 		case 1:
 			dc.SetRGB255(
-				int((cr.Settings>>8)&0xFF),  // #nosec G115
-				int((cr.Settings>>16)&0xFF), // #nosec G115
-				int((cr.Settings>>24)&0xFF), // #nosec G115
+				int((cr.Settings>>8)&0xFF),
+				int((cr.Settings>>16)&0xFF),
+				int((cr.Settings>>24)&0xFF),
 			)
-
 		default:
 			dc.SetColor(s.defaultForegroundColor)
 		}
 
-		switch str {
+		// special symbols
+		switch sym {
 		case "\n":
-			x = xOffset + paddingX
-			y += h * s.lineSpacing
+			x = marginX + paddingX // reset x position
+			y += h * s.lineSpacing // advance y position by line spacing
 			continue
-
 		case "\t":
-			x += w * float64(s.tabSpaces)
+			x += w * float64(s.tabSpaces) // advance x position by tab
 			continue
-
 		case "✗", "ˣ": // mitigate issue #1 by replacing it with a similar character
-			str = "×"
+			sym = "×"
 		}
 
-		dc.DrawString(str, x, y)
+		dc.DrawString(sym, x, y)
 
-		// There seems to be no font face based way to do an underlined
-		// string, therefore manually draw a line under each character
+		// manually draw an underline under each character
 		if cr.Settings&0x1C == 16 {
 			dc.DrawLine(x, y+f(4), x+w, y+f(4))
 			dc.SetLineWidth(f(1))
 			dc.Stroke()
 		}
 
-		x += w
+		x += w // advance x position for the next symbol
 	}
 
 	err := dc.SavePNG("out.png")
 	check("failed to save png", err)
 
 	return dc.Image()
+}
+
+func (s *Scaffold) WriteRaw(w io.Writer) { // TODO use it
+	_, err := w.Write([]byte(s.content.String()))
+	check("writing raw failed", err)
 }
 
 /*
@@ -268,14 +278,14 @@ func doShot(args []string) {
 	s := NewScaffold()
 	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
 	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
+	s.AddCommand(args...)                                                  // Add the issued command to the scaffold
 	s.AddContent(&buf)                                                     // Add the captured output to the scaffold
 	if loggingLevel >= 3 {
 		logInfo.Printf("from scaffold:\n%s", s.content.String())
 	}
 	w, h := s.measureContent()
 	logInfo.Printf("w: %f, h; %f", w, h)
-	s.image()
-	graph()
+	s.DoImage()
 }
 
 func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {
@@ -285,15 +295,6 @@ func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) 
 	check("failed to read pseudo-terminal file", err)
 	io.Copy(&printout, f) // read the stream, memorize it in the buffer
 	return printout
-}
-
-func graph() {
-	dc := gg.NewContext(1000, 1000)
-	dc.DrawCircle(500, 500, 400)
-	dc.SetRGB(0, 0, 0)
-	dc.Fill()
-	err := dc.SavePNG("dot.png")
-	check("failed to save png", err)
 }
 
 func check(hint string, e error) {
