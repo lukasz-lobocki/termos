@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"image"
 	"io"
 	"math"
 	"strings"
@@ -172,7 +173,7 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	return width, height, columns
 }
 
-func (s *Stage) SaveImage(contentWidth float64, contentHeight float64, target_filename string) error {
+func (s *Stage) GetImage(contentWidth float64, contentHeight float64, target_filename string) image.Image {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		marginX        = s.margin
@@ -270,15 +271,10 @@ func (s *Stage) SaveImage(contentWidth float64, contentHeight float64, target_fi
 
 		x += w // advance the x position for the next symbol
 	}
-
-	err := dc.SavePNG(target_filename)
-	if err != nil {
-		return fmt.Errorf("failed to save png. %w", err)
-	}
-	return nil
+	return dc.Image()
 }
 
-func (s *Stage) WriteRaw(w io.Writer) error { // TODO use it, to export 'command' as well.
+func (s *Stage) WriteRaw(w io.Writer) error {
 	_, err := w.Write([]byte(s.content.String()))
 	if err != nil {
 		return fmt.Errorf("writing raw failed. %w", err)
@@ -294,7 +290,7 @@ func (s *Stage) GetColumns() (columns int) {
 	if s.columns != 0 {
 		return s.columns
 	}
-	columns, _ = term.GetTerminalSize() // TODO: wykorzystac to przy deklarowaniu terminala
+	columns, _ = term.GetTerminalSize()
 	return columns
 }
 

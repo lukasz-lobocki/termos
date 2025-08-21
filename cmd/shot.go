@@ -10,6 +10,7 @@ import (
 	_ "embed"
 
 	"github.com/creack/pty"
+	"github.com/fogleman/gg"
 	"github.com/gonvenience/term"
 	"github.com/lukasz-lobocki/termos/stage"
 	"github.com/spf13/cobra"
@@ -60,7 +61,6 @@ func doShot(args []string) {
 	if err != nil {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
-	saveStream(buf.Bytes(), filepath.Clean(config.savedFilename+".txt")) // save it // TODO make it sip from scaffold
 
 	s, err = stage.New(config.columnNumber)
 	if err != nil {
@@ -82,10 +82,31 @@ func doShot(args []string) {
 
 	contentWidth, contentHeight, contentColumns := s.MeasureContent()
 	logInfo.Printf("Number of columns used: %d. Use '--columns' flag to impose it.", contentColumns)
-	err = s.SaveImage(contentWidth, contentHeight, filepath.Clean(config.savedFilename+".png"))
+	img := s.GetImage(contentWidth, contentHeight, filepath.Clean(config.savedFilename+".png"))
 	if err != nil {
 		logError.Fatalf("imaging failed. %v+", err)
 	}
+
+	err = saveStage(filepath.Clean(config.savedFilename+".txt"), s)
+	if err != nil {
+		logError.Fatalf("failed saving stage. %v+", err)
+	}
+
+	err = gg.SavePNG(filepath.Clean(config.savedFilename+".png"), img)
+	if err != nil {
+		logError.Fatalf("failed saving png. %v+", err)
+	}
+
+}
+
+func saveStage(path string, s stage.Stage) error {
+	output, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = output.Close() }()
+	err = s.WriteRaw(output)
+	return err
 }
 
 func getPrintout(rows int, cols int, cmd_name string, cmd_args ...string) (printout bytes.Buffer, err error) {
@@ -97,14 +118,4 @@ func getPrintout(rows int, cols int, cmd_name string, cmd_args ...string) (print
 	}
 	io.Copy(&printout, f) // read the stream, memorize it in the buffer
 	return printout, nil
-}
-
-func saveStream(source []byte, target_filename string) error {
-	o, err := os.Create(target_filename)
-	if err != nil {
-		return err
-	}
-	defer o.Close()
-	_, err = o.Write(source)
-	return err
 }
