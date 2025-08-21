@@ -25,7 +25,7 @@ var renderCmd = &cobra.Command{
 	Example: "  termos render --columns 80 -- out.txt",
 	Long: `
 Render png color screenshot of the file input.`,
-	Use: `render [shot flags] [--] filename`,
+	Use: `render [render flags] [--] filename`,
 }
 
 /*
