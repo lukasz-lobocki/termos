@@ -19,6 +19,7 @@ import (
 const (
 	BACKGROUND_COLOR = "#151515"
 	FOREGROUND_COLOR = "#DCDCDC"
+	TITLEBAR_COLOR   = "#696969"
 	RED              = "#ED655A"
 	YELLOW           = "#E1C04C"
 	GREEN            = "#71BD47"
@@ -37,6 +38,7 @@ type Stage struct {
 
 	foregroundColor string
 	backgroundColor string
+	titlebarColor   string
 	lineSpacing     float64
 	tabSpaces       int
 }
@@ -61,6 +63,7 @@ func New(magnification int, cols int) (Stage, error) {
 
 		foregroundColor: FOREGROUND_COLOR,
 		backgroundColor: BACKGROUND_COLOR,
+		titlebarColor:   TITLEBAR_COLOR,
 
 		columns: cols,
 
@@ -175,26 +178,34 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Imag
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		paddingX       = s.padding
-		paddingY       = s.padding
+		paddingY       = s.padding - f(10)
 		corner         = f(6)
 		dotsRadius     = f(9)
 		dotsDistance   = dotsRadius * 3
-		titleBarHeight = dotsRadius*2 + paddingY
+		titleBarHeight = dotsRadius*2 + paddingY*2
 	)
-	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // Make sure the output window is big enough
+	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // make sure the output window is big enough
 
 	width := contentWidth + 2*paddingX
 	height := contentHeight + 2*paddingY + titleBarHeight
 	dc := gg.NewContext(int(width), int(height))
 
 	// Rounded rectangle to produce an impression of a window
-	dc.DrawRoundedRectangle(0, 0, width, height, corner)
+	dc.DrawRoundedRectangle(0, corner, width, height-corner, corner) // lowered by the corner to hide terminal artifacts from behind
 	dc.SetHexColor(s.backgroundColor)
+	dc.Fill()
+
+	// Semi rectangle to produce an impression of a titlebar
+	dc.DrawRoundedRectangle(0, 0, width, titleBarHeight, corner)
+	dc.SetHexColor(s.titlebarColor)
+	dc.Fill()
+	dc.DrawRectangle(0, corner, width, titleBarHeight-corner) // making bottom flat
+	dc.SetHexColor(s.titlebarColor)
 	dc.Fill()
 
 	// 3 colored dots mimicking menu bar
 	for i, color := range []string{RED, YELLOW, GREEN} {
-		dc.DrawCircle(paddingX+dotsRadius+float64(i)*dotsDistance, paddingY+dotsRadius, dotsRadius)
+		dc.DrawCircle(paddingX+dotsRadius+float64(i)*dotsDistance, titleBarHeight/2, dotsRadius)
 		dc.SetHexColor(color)
 		dc.Fill()
 	}
