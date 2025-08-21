@@ -21,6 +21,8 @@ var (
 	builtDate   string
 )
 
+var config tConfig // Holds configuration.
+
 var semReleaseVersion string = semVer +
 	func(pre string, txt string) string {
 		if len(txt) > 0 {
@@ -58,7 +60,7 @@ var rootCmd = &cobra.Command{
 	// Run: func(cmd *cobra.Command, args []string) {},
 }
 
-// TODO shot(colums,command), grab(command), render(columns)
+// TODO grab(command,filename), render(columns,filename)
 
 var (
 	loggingLevel int         // Global logging level, see MAX_LOGGING_LEVEL.

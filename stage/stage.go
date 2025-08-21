@@ -52,7 +52,7 @@ var (
 	MonoRegular []byte
 )
 
-func New() (Stage, error) {
+func New(cols int) (Stage, error) {
 	f := 1.0
 
 	return Stage{
@@ -63,7 +63,7 @@ func New() (Stage, error) {
 		foregroundColor: FOREGROUND_COLOR,
 		backgroundColor: BACKGROUND_COLOR,
 
-		columns: 0, // TODO parametrize
+		columns: cols,
 
 		lineSpacing: 1.2,
 		tabSpaces:   2,
@@ -129,10 +129,11 @@ func (s *Stage) AddContent(in io.Reader) error {
 	return nil
 }
 
-func (s *Stage) AddCommand(args ...string) {
-	s.AddContent(strings.NewReader(
+func (s *Stage) AddCommand(args ...string) error {
+	err := s.AddContent(strings.NewReader(
 		bunt.Sprintf("Lime{$} Lime{%s}\n\n", strings.Join(args, " ")),
 	))
+	return err
 }
 
 func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
@@ -171,7 +172,7 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	return width, height, columns
 }
 
-func (s *Stage) SaveImage(contentWidth float64, contentHeight float64) error {
+func (s *Stage) SaveImage(contentWidth float64, contentHeight float64, target_filename string) error {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		marginX        = s.margin
@@ -270,14 +271,14 @@ func (s *Stage) SaveImage(contentWidth float64, contentHeight float64) error {
 		x += w // advance the x position for the next symbol
 	}
 
-	err := dc.SavePNG("out.png") // TODO refactor, extract it outside
+	err := dc.SavePNG(target_filename)
 	if err != nil {
 		return fmt.Errorf("failed to save png. %w", err)
 	}
 	return nil
 }
 
-func (s *Stage) WriteRaw(w io.Writer) error { // TODO use it
+func (s *Stage) WriteRaw(w io.Writer) error { // TODO use it, to export 'command' as well.
 	_, err := w.Write([]byte(s.content.String()))
 	if err != nil {
 		return fmt.Errorf("writing raw failed. %w", err)

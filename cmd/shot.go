@@ -5,11 +5,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
+	"path/filepath"
 
 	_ "embed"
 
 	"github.com/creack/pty"
+	"github.com/gonvenience/term"
 	"github.com/lukasz-lobocki/termos/stage"
 	"github.com/spf13/cobra"
 )
@@ -23,13 +24,10 @@ var shotCmd = &cobra.Command{
 
 	DisableFlagsInUseLine: true,
 
-	Example: "  step-badger sshCerts ./db",
+	Example: "  termos shot --columns 80 -- printf '1234567890%.0s' {1..6}",
 	Long: `
 Export ssh certificates' data out of the badger database of step-ca.`,
-	Use: `shot [shot flags] [--] command [command flags] [command arguments] [...] [flags]
-
-Arguments:
-  PATH   location of the source database`,
+	Use: `shot [shot flags] [--] command [command flags] [command arguments] [...] [flags]`,
 }
 
 /*
@@ -37,6 +35,14 @@ Cobra initiation.
 */
 func init() {
 	rootCmd.AddCommand(shotCmd)
+	// Hide help command.
+	shotCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
+	//Do not sort flags.
+	shotCmd.Flags().SortFlags = false
+
+	shotCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
+	shotCmd.Flags().StringVarP(&config.savedFilename, "filename", "f", "out", "name of files to be saved")
 }
 
 func doShot(args []string) {
@@ -44,54 +50,61 @@ func doShot(args []string) {
 		err error
 		s   stage.Stage
 	)
-
 	checkLogginglevel(args)
 
-	buf := getPrintout(TERMINAL_ROWS, TERMINAL_COLS, args[0], args[1:]...) // agr0 is the command to be run
-	saveStream(buf.Bytes(), SAVED_STREAM_FILENAME)                         // save it // TODO make it sip from scaffold
+	terminalWidth, terminalHeight := term.GetTerminalSize()
+	if loggingLevel >= 1 {
+		logInfo.Printf("pseudo-terminal width=%d, height=%d", terminalWidth, terminalHeight)
+	}
+	buf, err := getPrintout(terminalHeight, terminalWidth, args[0], args[1:]...) // agr0 is the command to be run
+	if err != nil {
+		logError.Fatalf("failed getting printout. %v", err)
+	}
+	saveStream(buf.Bytes(), filepath.Clean(config.savedFilename+".txt")) // save it // TODO make it sip from scaffold
 
-	s, err = stage.New()
-	check("failed creating stage", err)
-
+	s, err = stage.New(config.columnNumber)
+	if err != nil {
+		logError.Fatalf("failed creating stage. %v+", err)
+	}
 	err = s.AddFonts()
-	check("failed adding fonts", err)
+	if err != nil {
+		logError.Fatalf("failed adding fonts. %v+", err)
+	}
 
-	s.AddCommand(args...)    // Add the issued command to the scaffold
+	err = s.AddCommand(args...) // Add the issued command to the scaffold
+	if err != nil {
+		logError.Fatalf("failed adding command. %v+", err)
+	}
 	err = s.AddContent(&buf) // Add the captured output to the scaffold
-	check("failed adding content", err)
+	if err != nil {
+		logError.Fatalf("failed adding content. %v+", err)
+	}
 
 	contentWidth, contentHeight, contentColumns := s.MeasureContent()
-	logInfo.Printf("Number of columns used: %d. Use XXX parameter to impose it.", contentColumns) // TODO XXX
-	err = s.SaveImage(contentWidth, contentHeight)
-	check("imaging failed", err)
+	logInfo.Printf("Number of columns used: %d. Use '--columns' flag to impose it.", contentColumns)
+	err = s.SaveImage(contentWidth, contentHeight, filepath.Clean(config.savedFilename+".png"))
+	if err != nil {
+		logError.Fatalf("imaging failed. %v+", err)
+	}
 }
 
-func getPrintout(rows uint16, cols uint16, cmd_name string, cmd_args ...string) (printout bytes.Buffer) {
-	w := pty.Winsize{Rows: rows, Cols: cols} // size using received parameters
+func getPrintout(rows int, cols int, cmd_name string, cmd_args ...string) (printout bytes.Buffer, err error) {
+	w := pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)} // size using received parameters
 	c := exec.Command(cmd_name, cmd_args...)
 	f, err := pty.StartWithSize(c, &w) // get command output file from the (pty) pseudo-terminal
-	check("failed to read pseudo-terminal file", err)
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
 	io.Copy(&printout, f) // read the stream, memorize it in the buffer
-	return printout
+	return printout, nil
 }
 
-func check(hint string, e error) {
-	if len(hint) == 0 {
-		hint = "no hint"
-	}
-	if e != nil {
-		_, f, l, ok := runtime.Caller(1)
-		if ok {
-			logError.Fatalf("%s; %+v @ %s # %d", hint, e, f, l)
-		} else {
-			logError.Fatalf("%s; %+v", hint, e)
-		}
-	}
-}
-
-func saveStream(source []byte, target_filename string) {
+func saveStream(source []byte, target_filename string) error {
 	o, err := os.Create(target_filename)
-	check("failed to create a file", err)
+	if err != nil {
+		return err
+	}
 	defer o.Close()
-	o.Write(source)
+	_, err = o.Write(source)
+	return err
 }
