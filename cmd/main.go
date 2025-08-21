@@ -60,8 +60,6 @@ var rootCmd = &cobra.Command{
 	// Run: func(cmd *cobra.Command, args []string) {},
 }
 
-// TODO grab(command,filename), render(columns,filename)
-
 var (
 	loggingLevel int         // Global logging level, see MAX_LOGGING_LEVEL.
 	logInfo      *log.Logger // Blue logger, for info.

@@ -29,7 +29,6 @@ type Stage struct {
 	factor  float64
 	columns int
 	padding float64
-	margin  float64
 
 	regular    font.Face
 	bold       font.Face
@@ -58,7 +57,6 @@ func New(cols int) (Stage, error) {
 
 	return Stage{
 		factor:  f,
-		margin:  0,      //f * 48, // empty area outside of terminal window // TODO make param
 		padding: f * 24, // empty area inside of terminal window
 
 		foregroundColor: FOREGROUND_COLOR,
@@ -176,8 +174,6 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 func (s *Stage) GetImage(contentWidth float64, contentHeight float64, target_filename string) image.Image {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
-		marginX        = s.margin
-		marginY        = s.margin
 		paddingX       = s.padding
 		paddingY       = s.padding
 		corner         = f(6)
@@ -187,24 +183,24 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64, target_fil
 	)
 	contentWidth = math.Max(contentWidth, 3*dotsDistance+3*dotsRadius) // Make sure the output window is big enough
 
-	width := contentWidth + 2*marginX + 2*paddingX
-	height := contentHeight + 2*marginY + 2*paddingY + titleBarHeight
+	width := contentWidth + 2*paddingX
+	height := contentHeight + 2*paddingY + titleBarHeight
 	dc := gg.NewContext(int(width), int(height))
 
-	// Rounded rectangle inside the margins to produce an impression of a window
-	dc.DrawRoundedRectangle(marginX, marginY, width-2*marginX, height-2*marginY, corner)
+	// Rounded rectangle to produce an impression of a window
+	dc.DrawRoundedRectangle(0, 0, width, height, corner)
 	dc.SetHexColor(s.backgroundColor)
 	dc.Fill()
 
 	// 3 colored dots mimicking menu bar
 	for i, color := range []string{RED, YELLOW, GREEN} {
-		dc.DrawCircle(marginX+paddingX+dotsRadius+float64(i)*dotsDistance, marginY+paddingY+dotsRadius, dotsRadius)
+		dc.DrawCircle(paddingX+dotsRadius+float64(i)*dotsDistance, paddingY+dotsRadius, dotsRadius)
 		dc.SetHexColor(color)
 		dc.Fill()
 	}
 
 	// current posiion
-	var x, y = marginX + paddingX, marginY + paddingY + titleBarHeight + s.GetFontHeight()
+	var x, y = paddingX, paddingY + titleBarHeight + s.GetFontHeight()
 
 	for _, cr := range s.content { // for each rune
 
@@ -250,7 +246,7 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64, target_fil
 		// special symbols
 		switch sym {
 		case "\n":
-			x = marginX + paddingX // reset x position
+			x = paddingX           // reset x position
 			y += h * s.lineSpacing // advance y position by line spacing
 			continue
 		case "\t":

@@ -18,7 +18,7 @@ import (
 
 // shotCmd represents the shell command.
 var shotCmd = &cobra.Command{
-	Short:   "Export ssh certificates.",
+	Short:   "Create a screenshot",
 	Run:     func(cmd *cobra.Command, args []string) { doShot(args) },
 	Args:    cobra.MinimumNArgs(1),
 	Aliases: []string{"take", "snag", "grab"},
@@ -27,7 +27,7 @@ var shotCmd = &cobra.Command{
 
 	Example: "  termos shot --columns 80 -- printf '1234567890%.0s' {1..6}",
 	Long: `
-Export ssh certificates' data out of the badger database of step-ca.`,
+Create png and txt color screenshots of the terminal command output.`,
 	Use: `shot [shot flags] [--] command [command flags] [command arguments] [...] [flags]`,
 }
 
@@ -36,6 +36,7 @@ Cobra initiation.
 */
 func init() {
 	rootCmd.AddCommand(shotCmd)
+
 	// Hide help command.
 	shotCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
@@ -57,7 +58,7 @@ func doShot(args []string) {
 	if loggingLevel >= 1 {
 		logInfo.Printf("pseudo-terminal width=%d, height=%d", terminalWidth, terminalHeight)
 	}
-	buf, err := getPrintout(terminalHeight, terminalWidth, args[0], args[1:]...) // agr0 is the command to be run
+	buf, err := getTerminalOutput(terminalHeight, terminalWidth, args[0], args[1:]...) // agr0 is the command to be run
 	if err != nil {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
@@ -109,7 +110,7 @@ func saveStage(path string, s stage.Stage) error {
 	return err
 }
 
-func getPrintout(rows int, cols int, cmd_name string, cmd_args ...string) (printout bytes.Buffer, err error) {
+func getTerminalOutput(rows int, cols int, cmd_name string, cmd_args ...string) (printout bytes.Buffer, err error) {
 	w := pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)} // size using received parameters
 	c := exec.Command(cmd_name, cmd_args...)
 	f, err := pty.StartWithSize(c, &w) // get command output file from the (pty) pseudo-terminal
