@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "embed"
 
@@ -14,9 +15,9 @@ import (
 
 // shotCmd represents the shell command.
 var renderCmd = &cobra.Command{
-	Short:   "Render a screenshot.",
+	Short:   "Render a screenshot",
 	Run:     func(cmd *cobra.Command, args []string) { doRender(args) },
-	Args:    cobra.MinimumNArgs(1),
+	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"draw"},
 
 	DisableFlagsInUseLine: true,
@@ -31,8 +32,6 @@ Render png color screenshot of the file input.`,
 Cobra initiation.
 */
 func init() {
-	rootCmd.AddCommand(renderCmd)
-
 	// Hide help command.
 	renderCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
@@ -49,7 +48,7 @@ func doRender(args []string) {
 	)
 	checkLogginglevel(args)
 
-	buf, err := getFileOutput("out.txt") // TODO paramterize filename
+	buf, err := getFileOutput(filepath.Clean(args[0]))
 	if err != nil {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
@@ -70,12 +69,12 @@ func doRender(args []string) {
 
 	contentWidth, contentHeight, contentColumns := s.MeasureContent()
 	logInfo.Printf("Number of columns used: %d. Use '--columns' flag to impose it.", contentColumns)
-	img := s.GetImage(contentWidth, contentHeight, filepath.Clean(config.savedFilename+".png"))
+	img := s.GetImage(contentWidth, contentHeight)
 	if err != nil {
 		logError.Fatalf("imaging failed. %v+", err)
 	}
 
-	err = gg.SavePNG(filepath.Clean(config.savedFilename+".png"), img)
+	err = gg.SavePNG(filepath.Clean(strings.TrimSuffix(args[0], filepath.Ext(args[0]))+".png"), img)
 	if err != nil {
 		logError.Fatalf("failed saving png. %v+", err)
 	}
@@ -83,6 +82,9 @@ func doRender(args []string) {
 }
 
 func getFileOutput(filename string) (printout bytes.Buffer, err error) {
+	if loggingLevel >= 2 {
+		logInfo.Printf("Getting content from %s", filename)
+	}
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return printout, err

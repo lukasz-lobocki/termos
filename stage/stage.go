@@ -171,7 +171,7 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	return width, height, columns
 }
 
-func (s *Stage) GetImage(contentWidth float64, contentHeight float64, target_filename string) image.Image {
+func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Image {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
 		paddingX       = s.padding

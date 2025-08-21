@@ -35,8 +35,6 @@ Create png and txt color screenshots of the terminal command output.`,
 Cobra initiation.
 */
 func init() {
-	rootCmd.AddCommand(shotCmd)
-
 	// Hide help command.
 	shotCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
@@ -83,7 +81,7 @@ func doShot(args []string) {
 
 	contentWidth, contentHeight, contentColumns := s.MeasureContent()
 	logInfo.Printf("Number of columns used: %d. Use '--columns' flag to impose it.", contentColumns)
-	img := s.GetImage(contentWidth, contentHeight, filepath.Clean(config.savedFilename+".png"))
+	img := s.GetImage(contentWidth, contentHeight)
 	if err != nil {
 		logError.Fatalf("imaging failed. %v+", err)
 	}
@@ -101,6 +99,9 @@ func doShot(args []string) {
 }
 
 func saveStage(path string, s stage.Stage) error {
+	if loggingLevel >= 2 {
+		logInfo.Printf("Saving content to %s", path)
+	}
 	output, err := os.Create(path)
 	if err != nil {
 		return err

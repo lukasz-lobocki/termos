@@ -86,6 +86,11 @@ func init() {
 
 	//Do not sort flags.
 	rootCmd.Flags().SortFlags = false
+
+	//Do not sort commands.
+	cobra.EnableCommandSorting = false
+	rootCmd.AddCommand(shotCmd)
+	rootCmd.AddCommand(renderCmd)
 }
 
 func initLoggers() {
