@@ -52,8 +52,8 @@ var (
 	MonoRegular []byte
 )
 
-func New(cols int) (Stage, error) {
-	f := 1.0
+func New(magnification int, cols int) (Stage, error) {
+	f := float64(magnification)
 
 	return Stage{
 		factor:  f,
@@ -227,7 +227,7 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Imag
 				int((cr.Settings>>40)&0xFF),
 				int((cr.Settings>>48)&0xFF),
 			)
-			dc.DrawRectangle(x, y-h+12, w, h)
+			dc.DrawRectangle(x, y-h+f(3), w, h+f(3)) // f(3) added to account for ascenders & descenders
 			dc.Fill()
 		}
 

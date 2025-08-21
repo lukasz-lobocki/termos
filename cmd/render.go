@@ -39,6 +39,7 @@ func init() {
 	renderCmd.Flags().SortFlags = false
 
 	renderCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
+	renderCmd.Flags().IntVarP(&config.magnification, "magnification", "m", 1, "magnification factor")
 }
 
 func doRender(args []string) {
@@ -53,7 +54,7 @@ func doRender(args []string) {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
 
-	s, err = stage.New(config.columnNumber)
+	s, err = stage.New(config.magnification, config.columnNumber)
 	if err != nil {
 		logError.Fatalf("failed creating stage. %v+", err)
 	}

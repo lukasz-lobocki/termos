@@ -42,6 +42,7 @@ func init() {
 	shotCmd.Flags().SortFlags = false
 
 	shotCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
+	shotCmd.Flags().IntVarP(&config.magnification, "magnification", "m", 1, "magnification factor")
 	shotCmd.Flags().StringVarP(&config.savingFilename, "filename", "f", "out", "name of files to be saved")
 }
 
@@ -61,7 +62,7 @@ func doShot(args []string) {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
 
-	s, err = stage.New(config.columnNumber)
+	s, err = stage.New(config.magnification, config.columnNumber)
 	if err != nil {
 		logError.Fatalf("failed creating stage. %v+", err)
 	}

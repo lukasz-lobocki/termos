@@ -2,6 +2,12 @@
 
 Screenshots a terminal output.
 
+```bash
+termos shot --colums=80 -- ls --color=always -acl /
+```
+
+![example](example.png)
+
 ## Build
 
 See [BUILD.md](BUILD.md) file.

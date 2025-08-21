@@ -7,4 +7,5 @@ const (
 type tConfig struct {
 	columnNumber   int
 	savingFilename string
+	magnification  int
 }
