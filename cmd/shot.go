@@ -42,7 +42,7 @@ func init() {
 	shotCmd.Flags().SortFlags = false
 
 	shotCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
-	shotCmd.Flags().StringVarP(&config.savedFilename, "filename", "f", "out", "name of files to be saved")
+	shotCmd.Flags().StringVarP(&config.savingFilename, "filename", "f", "out", "name of files to be saved")
 }
 
 func doShot(args []string) {
@@ -86,12 +86,12 @@ func doShot(args []string) {
 		logError.Fatalf("imaging failed. %v+", err)
 	}
 
-	err = saveStage(filepath.Clean(config.savedFilename+".txt"), s)
+	err = saveStage(filepath.Clean(config.savingFilename+".txt"), s)
 	if err != nil {
 		logError.Fatalf("failed saving stage. %v+", err)
 	}
 
-	err = gg.SavePNG(filepath.Clean(config.savedFilename+".png"), img)
+	err = gg.SavePNG(filepath.Clean(config.savingFilename+".png"), img)
 	if err != nil {
 		logError.Fatalf("failed saving png. %v+", err)
 	}

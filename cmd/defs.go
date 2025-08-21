@@ -5,6 +5,6 @@ const (
 )
 
 type tConfig struct {
-	columnNumber  int
-	savedFilename string
+	columnNumber   int
+	savingFilename string
 }
