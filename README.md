@@ -28,7 +28,7 @@ Create *png* and *txt* color screenshots of the terminal command output.
 termos shot [shot flags] [--] command [command flags] [command arguments] [...] [flags]
 ```
 
-After editing *txt* file, render png color screenshot of the file input.
+After editing *txt* file, render *png* color screenshot of the file input.
 
 ```text
 termos render [render flags] [--] filename
