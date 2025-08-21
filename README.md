@@ -1,22 +1,34 @@
 # termos ![Static](https://img.shields.io/badge/plajta-werwa-chartreuse?style=for-the-badge&labelColor=cyan)
 
 Screenshots a terminal output.
-
 ```bash
-termos shot --colums=80 -- ls --color=always -acl /
+termos shot --filename example -- ls --color=always -acl /
+
+Flags:
+  -c, --columns int         number of columns rendered (default auto)
+  -m, --magnification int   magnification factor (default 1)
+  -f, --filename string     name of files to be saved (default "out")
+```
+Specific features:
+- Julia fonts are built-in to secure broad international glyphs coverage.
+- Reports back the number of columns actually used by the shot.
+
+```text
+╭info
+╰Number of columns used: 62. Use '--columns' flag to impose it.
 ```
 
 ![example](example.png)
 
 ## Usage
 
-Create png and txt color screenshots of the terminal command output.
+Create *png* and *txt* color screenshots of the terminal command output.
 
 ```text
 termos shot [shot flags] [--] command [command flags] [command arguments] [...] [flags]
 ```
 
-Render png color screenshot of the file input.
+After editing *txt* file, render png color screenshot of the file input.
 
 ```text
 termos render [render flags] [--] filename
