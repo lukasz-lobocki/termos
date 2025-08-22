@@ -17,12 +17,9 @@ import (
 )
 
 const (
-	BACKGROUND_COLOR = "#151515"
-	FOREGROUND_COLOR = "#DCDCDC"
-	TITLEBAR_COLOR   = "#696969"
-	RED              = "#ED655A"
-	YELLOW           = "#E1C04C"
-	GREEN            = "#71BD47"
+	RED    = "#ED655A"
+	YELLOW = "#E1C04C"
+	GREEN  = "#71BD47"
 )
 
 type Stage struct {
@@ -36,9 +33,10 @@ type Stage struct {
 	italic     font.Face
 	boldItalic font.Face
 
-	foregroundColor string
-	backgroundColor string
 	titlebarColor   string
+	backgroundColor string
+	foregroundColor string
+	commandColor    string
 	lineSpacing     float64
 	tabSpaces       int
 }
@@ -54,16 +52,17 @@ var (
 	MonoRegular []byte
 )
 
-func New(magnification int, cols int) (Stage, error) {
+func New(titlebarColor string, backgroundColor string, foregroundColor string, commandColor string, magnification int, cols int) (Stage, error) {
 	f := float64(magnification)
 
 	return Stage{
 		factor:  f,
 		padding: f * 24, // empty area inside of terminal window
 
-		foregroundColor: FOREGROUND_COLOR,
-		backgroundColor: BACKGROUND_COLOR,
-		titlebarColor:   TITLEBAR_COLOR,
+		titlebarColor:   titlebarColor,
+		backgroundColor: backgroundColor,
+		foregroundColor: foregroundColor,
+		commandColor:    commandColor,
 
 		columns: cols,
 
@@ -133,7 +132,7 @@ func (s *Stage) AddContent(in io.Reader) error {
 
 func (s *Stage) AddCommand(args ...string) error {
 	err := s.AddContent(strings.NewReader(
-		bunt.Sprintf("Lime{$} Lime{%s}\n\n", strings.Join(args, " ")),
+		bunt.Sprintf(s.commandColor+"{$} "+s.commandColor+"{%s}\n\n", strings.Join(args, " ")),
 	))
 	return err
 }
@@ -191,7 +190,7 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Imag
 	dc := gg.NewContext(int(width), int(height))
 
 	// Rounded rectangle to produce an impression of a window
-	dc.DrawRoundedRectangle(0, corner, width, height-corner, corner) // lowered by the corner to hide terminal artifacts from behind
+	dc.DrawRoundedRectangle(0, corner, width, height-corner, corner) // lowered by the corner to hide bacground artifacts from behind
 	dc.SetHexColor(s.backgroundColor)
 	dc.Fill()
 

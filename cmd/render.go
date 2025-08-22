@@ -40,6 +40,10 @@ func init() {
 
 	renderCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
 	renderCmd.Flags().IntVarP(&config.magnification, "magnification", "m", 1, "magnification factor")
+	renderCmd.Flags().StringVar(&config.titlebarColor, "tc", "#696969", "titlebar color hex")
+	renderCmd.Flags().StringVar(&config.backgroundColor, "bc", "#151515", "background color hex")
+	renderCmd.Flags().StringVar(&config.foregroundColor, "fc", "#DCDCDC", "foreground color hex")
+	renderCmd.Flags().StringVar(&config.commandColor, "cc", "#16AF1B", "command color hex")
 }
 
 func doRender(args []string) {
@@ -54,7 +58,7 @@ func doRender(args []string) {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
 
-	s, err = stage.New(config.magnification, config.columnNumber)
+	s, err = stage.New(config.titlebarColor, config.backgroundColor, config.foregroundColor, config.commandColor, config.magnification, config.columnNumber)
 	if err != nil {
 		logError.Fatalf("failed creating stage. %v+", err)
 	}

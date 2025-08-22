@@ -42,8 +42,12 @@ func init() {
 	shotCmd.Flags().SortFlags = false
 
 	shotCmd.Flags().IntVarP(&config.columnNumber, "columns", "c", 0, "number of columns rendered (default auto)")
-	shotCmd.Flags().IntVarP(&config.magnification, "magnification", "m", 1, "magnification factor")
 	shotCmd.Flags().StringVarP(&config.savingFilename, "filename", "f", "out", "name of files to be saved")
+	shotCmd.Flags().IntVarP(&config.magnification, "magnification", "m", 1, "magnification factor")
+	shotCmd.Flags().StringVar(&config.titlebarColor, "tc", "#696969", "titlebar color hex")
+	shotCmd.Flags().StringVar(&config.backgroundColor, "bc", "#151515", "background color hex")
+	shotCmd.Flags().StringVar(&config.foregroundColor, "fc", "#DCDCDC", "foreground color hex")
+	shotCmd.Flags().StringVar(&config.commandColor, "cc", "#16AF1B", "command color hex")
 }
 
 func doShot(args []string) {
@@ -62,7 +66,7 @@ func doShot(args []string) {
 		logError.Fatalf("failed getting printout. %v", err)
 	}
 
-	s, err = stage.New(config.magnification, config.columnNumber)
+	s, err = stage.New(config.titlebarColor, config.backgroundColor, config.foregroundColor, config.commandColor, config.magnification, config.columnNumber)
 	if err != nil {
 		logError.Fatalf("failed creating stage. %v+", err)
 	}

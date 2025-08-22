@@ -1,16 +1,22 @@
 # termos ![Static](https://img.shields.io/badge/plajta-werwa-chartreuse?style=for-the-badge&labelColor=cyan)
 
 Screenshots a terminal output.
-```bash
+
+```text
 termos shot --filename example -- ls --color=always -acl /
 
 Flags:
   -c, --columns int         number of columns rendered (default auto)
-  -m, --magnification int   magnification factor (default 1)
   -f, --filename string     name of files to be saved (default "out")
+  -m, --magnification int   magnification factor (default 1)
+      --tc string           titlebar color hex (default "#696969")
+      --bc string           background color hex (default "#151515")
+      --fc string           foreground color hex (default "#DCDCDC")
+      --cc string           command color hex (default "#16AF1B")
 ```
 Specific features:
 - Julia fonts are built-in to secure broad international glyphs coverage.
+- Control over colors rendered via flags.
 - Reports back the number of columns actually used by the shot.
 
 ```text

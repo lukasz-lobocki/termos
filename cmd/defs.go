@@ -5,7 +5,11 @@ const (
 )
 
 type tConfig struct {
-	columnNumber   int
-	savingFilename string
-	magnification  int
+	columnNumber    int
+	savingFilename  string
+	magnification   int
+	foregroundColor string
+	backgroundColor string
+	titlebarColor   string
+	commandColor    string
 }
