@@ -24,7 +24,7 @@ Specific features:
 ╰Number of columns used: 62. Use '--columns' flag to impose it.
 ```
 
-![example](example.png)
+![example](cmd/example.png)
 
 ## Usage
 
@@ -42,7 +42,7 @@ termos render [render flags] [--] filename
 
 ## Build
 
-See [BUILD.md](BUILD.md) file.
+See [BUILD.md](cmd/BUILD.md) file.
 
 ## License
 
