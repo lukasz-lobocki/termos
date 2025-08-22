@@ -3,7 +3,7 @@
 Screenshots a terminal output.
 
 ```text
-termos shot --filename example -- ls --color=always -acl /
+termos shot --cc=#ff4500 -- ls --color=always -acl /
 
 Flags:
   -c, --columns int         number of columns rendered (default auto)
