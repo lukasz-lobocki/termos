@@ -58,6 +58,9 @@ func doShot(args []string) {
 	checkLogginglevel(args)
 
 	terminalWidth, terminalHeight := term.GetTerminalSize()
+	if config.columnNumber > 0 { // enforce width if number columns is given
+		terminalWidth = config.columnNumber
+	}
 	if loggingLevel >= 1 {
 		logInfo.Printf("pseudo-terminal width=%d, height=%d", terminalWidth, terminalHeight)
 	}
