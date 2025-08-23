@@ -1,6 +1,7 @@
 # termos ![Static](https://img.shields.io/badge/plajta-werwa-chartreuse?style=for-the-badge&labelColor=cyan)
 
 ![example](cmd/example.png)
+![example](cmd/example.png)
 
 ```text
 termos shot --cc=#ff4500 -- eza --icons=always -lGh
