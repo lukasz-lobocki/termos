@@ -1,9 +1,10 @@
 # termos ![Static](https://img.shields.io/badge/plajta-werwa-chartreuse?style=for-the-badge&labelColor=cyan)
 
 ![example](cmd/example.png)
+![example](cmd/example.png)
 
 ```text
-termos shot --cc=#ff4500 -- ls --color=always -shCp /
+termos shot --cc=#ff4500 -- eza --icons=always -lGh
 
 Flags:
   -c, --columns int         number of columns rendered (default auto)
@@ -15,14 +16,16 @@ Flags:
       --cc string           command color hex (default "#16AF1B")
 ```
 Specific features:
-- Julia fonts are built-in to secure broad coverage of international glyphs.
-- Control over colors rendered via flags.
-- Reporting back the number of columns actually used by the shot.
+- Embedded *ZedMono Nerd Font*. Providing broad range of glyphs and icons.
+- Flags allow control over colors rendered.
+- Reports back the number of columns actually used by the shot.
 
 ```text
 ╭info
 ╰Number of columns used: 62. Use '--columns' flag to impose it.
 ```
+
+
 
 ## Usage
 

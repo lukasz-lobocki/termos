@@ -42,13 +42,13 @@ type Stage struct {
 }
 
 var (
-	//go:embed JuliaMono-Bold.ttf
+	//go:embed ZedMonoNerdFontMono-Bold.ttf
 	MonoBold []byte
-	//go:embed JuliaMono-BoldItalic.ttf
+	//go:embed ZedMonoNerdFontMono-BoldItalic.ttf
 	MonoBoldItalic []byte
-	//go:embed JuliaMono-RegularItalic.ttf
+	//go:embed ZedMonoNerdFontMono-Italic.ttf
 	MonoItalic []byte
-	//go:embed JuliaMono-Regular.ttf
+	//go:embed ZedMonoNerdFontMono-Regular.ttf
 	MonoRegular []byte
 )
 
