@@ -1,9 +1,9 @@
 # termos ![Static](https://img.shields.io/badge/plajta-werwa-chartreuse?style=for-the-badge&labelColor=cyan)
 
-Screenshots a terminal output.
+![example](cmd/example.png)
 
 ```text
-termos shot --cc=#ff4500 -- ls --color=always -acl /
+termos shot --cc=#ff4500 -- ls --color=always -shCp /
 
 Flags:
   -c, --columns int         number of columns rendered (default auto)
@@ -15,16 +15,14 @@ Flags:
       --cc string           command color hex (default "#16AF1B")
 ```
 Specific features:
-- Julia fonts are built-in to secure broad international glyphs coverage.
+- Julia fonts are built-in to secure broad coverage of international glyphs.
 - Control over colors rendered via flags.
-- Reports back the number of columns actually used by the shot.
+- Reporting back the number of columns actually used by the shot.
 
 ```text
 ╭info
 ╰Number of columns used: 62. Use '--columns' flag to impose it.
 ```
-
-![example](cmd/example.png)
 
 ## Usage
 
