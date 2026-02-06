@@ -33,9 +33,6 @@ type Stage struct {
 	italic     font.Face
 	boldItalic font.Face
 
-	// new: font face for CJK glyphs
-	cjk font.Face
-
 	titlebarColor   string
 	backgroundColor string
 	foregroundColor string
@@ -53,12 +50,6 @@ var (
 	MonoItalic []byte
 	//go:embed ZedMonoNerdFontMono-Regular.ttf
 	MonoRegular []byte
-
-	// NEW: embed a font that contains Chinese glyphs (add the file stage/NotoSansSC-Regular.ttf)
-	// Put a CJK TTF into stage/NotoSansSC-Regular.ttf in the repository before building.
-	// Example: https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJKsc-hinted.zip
-	//go:embed NotoSansSC-Regular.ttf
-	NotoSansSC []byte
 )
 
 func New(titlebarColor string, backgroundColor string, foregroundColor string, commandColor string, magnification int, cols int) (Stage, error) {
@@ -106,15 +97,6 @@ func (s *Stage) AddFonts() error {
 		return fmt.Errorf("failed to parse MonoBoldItalic font. %w", err)
 	}
 	s.boldItalic = truetype.NewFace(fontBoldItalic, fontFaceOptions)
-
-	// NEW: parse CJK font and create face (if embedded bytes are present)
-	if len(NotoSansSC) > 0 {
-		fontCJK, err := truetype.Parse(NotoSansSC)
-		if err != nil {
-			return fmt.Errorf("failed to parse CJK font. %w", err)
-		}
-		s.cjk = truetype.NewFace(fontCJK, fontFaceOptions)
-	}
 
 	return nil
 }
@@ -191,31 +173,6 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 	return width, height, columns
 }
 
-// isCJK detects common CJK codepoint ranges.
-// This is a lightweight heuristic used to pick the CJK face when available.
-func isCJK(r rune) bool {
-	switch {
-	case r >= 0x4E00 && r <= 0x9FFF: // CJK Unified Ideographs
-		return true
-	case r >= 0x3400 && r <= 0x4DBF: // CJK Unified Ideographs Extension A
-		return true
-	case r >= 0x20000 && r <= 0x2A6DF: // Extension B
-		return true
-	case r >= 0x2A700 && r <= 0x2B73F: // Extension C
-		return true
-	case r >= 0x2B740 && r <= 0x2B81F: // Extension D
-		return true
-	case r >= 0x2B820 && r <= 0x2CEAF: // Extension E
-		return true
-	case r >= 0xF900 && r <= 0xFAFF: // CJK Compatibility Ideographs
-		return true
-	case r >= 0x2F800 && r <= 0x2FA1F: // CJK Compatibility Ideographs Supplement
-		return true
-	default:
-		return false
-	}
-}
-
 func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Image {
 	var (
 		f              = func(v float64) float64 { return s.factor * v }
@@ -257,23 +214,17 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Imag
 
 	for _, cr := range s.content { // for each rune
 
-		// choose font face (use CJK face for CJK codepoints)
-		var face font.Face
-		if isCJK(cr.Symbol) && s.cjk != nil {
-			face = s.cjk
-		} else {
-			switch cr.Settings & 0x1C {
-			case 4:
-				face = s.bold
-			case 8:
-				face = s.italic
-			case 12:
-				face = s.boldItalic
-			default:
-				face = s.regular
-			}
+		// change font face
+		switch cr.Settings & 0x1C {
+		case 4:
+			dc.SetFontFace(s.bold)
+		case 8:
+			dc.SetFontFace(s.italic)
+		case 12:
+			dc.SetFontFace(s.boldItalic)
+		default:
+			dc.SetFontFace(s.regular)
 		}
-		dc.SetFontFace(face)
 
 		sym := string(cr.Symbol)
 		w, h := dc.MeasureString(sym)
