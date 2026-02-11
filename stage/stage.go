@@ -14,6 +14,7 @@ import (
 	"github.com/gonvenience/bunt"
 	"github.com/gonvenience/term"
 	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 )
 
 const (
@@ -32,6 +33,7 @@ type Stage struct {
 	bold       font.Face
 	italic     font.Face
 	boldItalic font.Face
+	cjkRegular font.Face
 
 	titlebarColor   string
 	backgroundColor string
@@ -50,6 +52,8 @@ var (
 	MonoItalic []byte
 	//go:embed ZedMonoNerdFontMono-Regular.ttf
 	MonoRegular []byte
+	//go:embed NotoSansMonoCJKsc-Regular.otf
+	CJKRegular []byte
 )
 
 func New(titlebarColor string, backgroundColor string, foregroundColor string, commandColor string, magnification int, cols int) (Stage, error) {
@@ -97,6 +101,20 @@ func (s *Stage) AddFonts() error {
 		return fmt.Errorf("failed to parse MonoBoldItalic font. %w", err)
 	}
 	s.boldItalic = truetype.NewFace(fontBoldItalic, fontFaceOptions)
+
+	// Parse CJK OpenType font
+	fontCJK, err := opentype.Parse(CJKRegular)
+	if err != nil {
+		return fmt.Errorf("failed to parse CJK font. %w", err)
+	}
+	s.cjkRegular, err = opentype.NewFace(fontCJK, &opentype.FaceOptions{
+		Size:    s.factor * 12,
+		DPI:     144,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create CJK font face. %w", err)
+	}
 
 	return nil
 }
@@ -152,12 +170,24 @@ func (s *Stage) MeasureContent() (width float64, height float64, columns int) {
 
 	// temporary drawer for measurements
 	d := &font.Drawer{Face: s.regular}
+	cjkDrawer := &font.Drawer{Face: s.cjkRegular}
 
 	switch s.columns {
 	case 0: // width based on actual longest line
 		for _, l := range ls {
-			if lw := float64(d.MeasureString(l) >> 6); lw > width { // type of fixed.Int26_6 divided by 2^6
-				width = lw // update width if measured current line width was bigger
+			// Measure line width considering CJK characters
+			var lineWidth float64
+			for _, r := range l {
+				if isCJK(r) {
+					cjkDrawer.Face = s.cjkRegular
+					lineWidth += float64(cjkDrawer.MeasureString(string(r)) >> 6)
+				} else {
+					d.Face = s.regular
+					lineWidth += float64(d.MeasureString(string(r)) >> 6)
+				}
+			}
+			if lineWidth > width {
+				width = lineWidth
 			}
 			if cw := bunt.PlainTextLength(l); cw > columns {
 				columns = cw // update columns if measured current line columns was bigger
@@ -227,6 +257,12 @@ func (s *Stage) GetImage(contentWidth float64, contentHeight float64) image.Imag
 		}
 
 		sym := string(cr.Symbol)
+		
+		// Use CJK font for CJK characters
+		if isCJK(cr.Symbol) {
+			dc.SetFontFace(s.cjkRegular)
+		}
+		
 		w, h := dc.MeasureString(sym)
 
 		// change background color
@@ -306,4 +342,24 @@ func (s *Stage) GetFontHeight() float64 {
 
 func (s *Stage) GetContent() bunt.String {
 	return s.content
+}
+
+// isCJK checks if a rune is in the CJK Unified Ideographs range
+func isCJK(r rune) bool {
+	return (r >= 0x4E00 && r <= 0x9FFF) || // CJK Unified Ideographs
+		(r >= 0x3400 && r <= 0x4DBF) || // CJK Unified Ideographs Extension A
+		(r >= 0x20000 && r <= 0x2A6DF) || // CJK Unified Ideographs Extension B
+		(r >= 0x2A700 && r <= 0x2B73F) || // CJK Unified Ideographs Extension C
+		(r >= 0x2B740 && r <= 0x2B81F) || // CJK Unified Ideographs Extension D
+		(r >= 0x2B820 && r <= 0x2CEAF) || // CJK Unified Ideographs Extension E
+		(r >= 0xF900 && r <= 0xFAFF) || // CJK Compatibility Ideographs
+		(r >= 0x2F800 && r <= 0x2FA1F) || // CJK Compatibility Ideographs Supplement
+		(r >= 0x3040 && r <= 0x309F) || // Hiragana
+		(r >= 0x30A0 && r <= 0x30FF) || // Katakana
+		(r >= 0x31F0 && r <= 0x31FF) || // Katakana Phonetic Extensions
+		(r >= 0xAC00 && r <= 0xD7AF) || // Hangul Syllables
+		(r >= 0x1100 && r <= 0x11FF) || // Hangul Jamo
+		(r >= 0x3130 && r <= 0x318F) || // Hangul Compatibility Jamo
+		(r >= 0xA960 && r <= 0xA97F) || // Hangul Jamo Extended-A
+		(r >= 0xD7B0 && r <= 0xD7FF) // Hangul Jamo Extended-B
 }
