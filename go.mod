@@ -17,6 +17,7 @@ require (
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 )
 
 require (
