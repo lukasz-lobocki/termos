@@ -2,7 +2,7 @@
 
 ## Build a snapshot
 
-To build the solution with dirty repository, use the following command with `--snapshot` parameter.
+To build the solution with dirty repository, use the following command, in the repo's root directory, with `--snapshot` parameter.
 
 ```bash
 goreleaser build --clean --snapshot
